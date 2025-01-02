@@ -1,28 +1,68 @@
 import SwiftUI
 
 struct AddActionView: View {
-    @Binding var isPresented: Bool
+    @Environment(\.dismiss) private var dismiss
     @State private var actionName = ""
-    let onAdd: (String) -> Void
+    @State private var tokenMultiple = 5
+    @State private var tokenText = "Achievement Token"
+    @State private var showingStartCount = false
+    @State private var startCount = 0
+    
+    let onAdd: (String, Int, String, Int) -> Void
     
     var body: some View {
         NavigationView {
             Form {
-                TextField("Action name", text: $actionName)
-            }
-            .navigationTitle("New Action")
-            .navigationBarItems(
-                leading: Button("Cancel") {
-                    isPresented = false
-                },
-                trailing: Button("Add") {
-                    if !actionName.isEmpty {
-                        onAdd(actionName)
-                        isPresented = false
+                Section(header: Text("Action Details")) {
+                    TextField("Action name", text: $actionName)
+                        .autocapitalization(.words)
+                    
+                    if showingStartCount {
+                        Stepper("Starting count: \(startCount)", value: $startCount, in: 0...9999)
                     }
                 }
-                .disabled(actionName.isEmpty)
-            )
+                
+                Section(
+                    header: Text("Token Settings"),
+                    footer: Text("A token with the text '\(tokenText)' will be created every \(tokenMultiple) times you complete this action.")
+                ) {
+                    Stepper("Create token every \(tokenMultiple) counts", value: $tokenMultiple, in: 1...100)
+                    
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Token text")
+                            .foregroundStyle(.secondary)
+                        TextField("Token text", text: $tokenText)
+                            .textFieldStyle(.roundedBorder)
+                            .autocapitalization(.words)
+                    }
+                }
+            }
+            .navigationTitle("New Action")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Add") {
+                        if !actionName.isEmpty {
+                            onAdd(actionName, tokenMultiple, tokenText, startCount)
+                            dismiss()
+                        }
+                    }
+                    .disabled(actionName.isEmpty)
+                }
+                ToolbarItem(placement: .principal) {
+                    Text("New Action")
+                        .onLongPressGesture {
+                            withAnimation {
+                                showingStartCount.toggle()
+                            }
+                        }
+                }
+            }
         }
     }
 } 

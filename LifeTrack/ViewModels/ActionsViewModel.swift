@@ -1,15 +1,19 @@
 import Foundation
 import SwiftUI
+import os
 
 @MainActor
 class ActionsViewModel: ObservableObject {
-    @Published var actions: [Action] = []
+    @Published private(set) var actions: [Action] = []
     @Published var isEditMode = false
     
     private let saveKey = "savedActions"
     private let lastOpenedDateKey = "lastOpenedDate"
+    private let tokenViewModel: TokenViewModel
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.lifetrack", category: "ActionsViewModel")
     
-    init() {
+    init(tokenViewModel: TokenViewModel) {
+        self.tokenViewModel = tokenViewModel
         checkDate()
         loadActions()
     }
@@ -21,12 +25,9 @@ class ActionsViewModel: ObservableObject {
             let lastOpenedDate = Calendar.current.startOfDay(for: lastOpenedData)
             
             if currentDate != lastOpenedDate {
-                // Nieuwe dag, reset alle lastTapped datums
                 resetAllLastTappedDates()
             }
         }
-        
-        // Update de laatste openingsdatum
         UserDefaults.standard.set(currentDate, forKey: lastOpenedDateKey)
     }
     
@@ -38,22 +39,44 @@ class ActionsViewModel: ObservableObject {
     }
     
     private func loadActions() {
-        if let data = UserDefaults.standard.data(forKey: saveKey),
-           let decoded = try? JSONDecoder().decode([Action].self, from: data) {
-            self.actions = decoded
+        do {
+            if let data = UserDefaults.standard.data(forKey: saveKey) {
+                let decoder = JSONDecoder()
+                actions = try decoder.decode([Action].self, from: data)
+                logger.info("Successfully loaded \(self.actions.count) actions")
+            } else {
+                logger.info("No saved actions found")
+            }
+        } catch {
+            logger.error("Failed to load actions: \(error.localizedDescription)")
+            actions = []
         }
     }
     
     private func saveActions() {
-        if let encoded = try? JSONEncoder().encode(actions) {
-            UserDefaults.standard.set(encoded, forKey: saveKey)
+        do {
+            let encoder = JSONEncoder()
+            let data = try encoder.encode(actions)
+            UserDefaults.standard.set(data, forKey: saveKey)
+            logger.info("Successfully saved \(self.actions.count) actions")
+        } catch {
+            logger.error("Failed to save actions: \(error.localizedDescription)")
         }
     }
     
-    func addAction(name: String) {
-        let action = Action(name: name)
+    func addAction(name: String, tokenMultiple: Int = 5, tokenText: String = "Achievement Token", startCount: Int = 0) {
+        let action = Action(name: name, count: startCount, tokenMultiple: tokenMultiple, tokenText: tokenText)
         actions.append(action)
         saveActions()
+        
+        // Create initial tokens if needed
+        if startCount > 0 {
+            for count in 1...startCount {
+                if action.shouldCreateToken(forCount: count) {
+                    tokenViewModel.addToken(action.tokenText(forCount: count))
+                }
+            }
+        }
     }
     
     func updateAction(_ action: Action) {
@@ -69,12 +92,23 @@ class ActionsViewModel: ObservableObject {
     }
     
     func incrementCount(for action: Action) {
-        if let index = actions.firstIndex(where: { $0.id == action.id }) {
-            var updatedAction = action
-            updatedAction.count = min(action.count + 1, 9999)
-            updatedAction.lastTapped = Date()
-            actions[index] = updatedAction
-            saveActions()
+        guard let index = actions.firstIndex(where: { $0.id == action.id }) else {
+            logger.error("Failed to find action with id: \(action.id)")
+            return
+        }
+        
+        var updatedAction = action
+        let newCount = action.count + 1
+        
+        // Update the action
+        updatedAction.count = newCount
+        updatedAction.lastTapped = Date()
+        actions[index] = updatedAction
+        saveActions()
+        
+        // Check if we should create a token
+        if updatedAction.shouldCreateToken(forCount: newCount) {
+            tokenViewModel.addToken(updatedAction.tokenText(forCount: newCount))
         }
     }
 } 
