@@ -53,6 +53,16 @@ struct SettingsView: View {
                         }
                     }
                 }
+                
+                Section {
+                    HStack {
+                        Spacer()
+                        Text("Version 0.1")
+                            .font(.footnote)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                    }
+                }
             }
             .navigationTitle("Settings")
             .navigationBarItems(leading: Button("Done") {
