@@ -4,7 +4,7 @@ struct AddActionView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var actionName = ""
     @State private var tokenMultiple = 5
-    @State private var tokenText = "Achievement Token"
+    @State private var tokenText = "Achievement token"
     @State private var showingStartCount = false
     @State private var startCount = 0
     
@@ -15,7 +15,7 @@ struct AddActionView: View {
             Form {
                 Section(header: Text("Action Details")) {
                     TextField("Action name", text: $actionName)
-                        .autocapitalization(.words)
+                        .autocapitalization(.sentences)
                     
                     if showingStartCount {
                         Stepper("Starting count: \(startCount)", value: $startCount, in: 0...9999)
@@ -33,7 +33,7 @@ struct AddActionView: View {
                             .foregroundStyle(.secondary)
                         TextField("Token text", text: $tokenText)
                             .textFieldStyle(.roundedBorder)
-                            .autocapitalization(.words)
+                            .autocapitalization(.sentences)
                     }
                 }
             }

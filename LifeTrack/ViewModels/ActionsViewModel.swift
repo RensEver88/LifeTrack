@@ -14,8 +14,8 @@ class ActionsViewModel: ObservableObject {
     
     init(tokenViewModel: TokenViewModel) {
         self.tokenViewModel = tokenViewModel
-        checkDate()
-        loadActions()
+        loadActions()  // Load actions first
+        checkDate()    // Then check date to potentially reset lastTapped
     }
     
     private func checkDate() {
@@ -29,6 +29,7 @@ class ActionsViewModel: ObservableObject {
             }
         }
         UserDefaults.standard.set(currentDate, forKey: lastOpenedDateKey)
+        UserDefaults.standard.synchronize() // Ensure the date is saved immediately
     }
     
     private func resetAllLastTappedDates() {
@@ -46,6 +47,7 @@ class ActionsViewModel: ObservableObject {
                 logger.info("Successfully loaded \(self.actions.count) actions")
             } else {
                 logger.info("No saved actions found")
+                actions = []
             }
         } catch {
             logger.error("Failed to load actions: \(error.localizedDescription)")
@@ -58,6 +60,7 @@ class ActionsViewModel: ObservableObject {
             let encoder = JSONEncoder()
             let data = try encoder.encode(actions)
             UserDefaults.standard.set(data, forKey: saveKey)
+            UserDefaults.standard.synchronize() // Ensure actions are saved immediately
             logger.info("Successfully saved \(self.actions.count) actions")
         } catch {
             logger.error("Failed to save actions: \(error.localizedDescription)")

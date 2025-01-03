@@ -20,10 +20,10 @@ class TokenViewModel: ObservableObject {
                 logger.info("Successfully loaded \(self.tokens.count) tokens")
             } else {
                 logger.info("No saved tokens found")
+                tokens = []
             }
         } catch {
             logger.error("Failed to load tokens: \(error.localizedDescription)")
-            // Reset to empty state on error
             tokens = []
         }
     }
@@ -33,6 +33,7 @@ class TokenViewModel: ObservableObject {
             let encoder = JSONEncoder()
             let data = try encoder.encode(tokens)
             UserDefaults.standard.set(data, forKey: saveKey)
+            UserDefaults.standard.synchronize() // Ensure tokens are saved immediately
             logger.info("Successfully saved \(self.tokens.count) tokens")
         } catch {
             logger.error("Failed to save tokens: \(error.localizedDescription)")
